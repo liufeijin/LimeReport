@@ -33,7 +33,7 @@
 
 namespace LimeReport{
 
-class ImageItem : public LimeReport::ItemDesignIntf
+class ImageItem : public ItemDesignIntf, public IPainterProxy
 {
     Q_OBJECT
     Q_ENUMS(Format)
@@ -47,7 +47,10 @@ class ImageItem : public LimeReport::ItemDesignIntf
     Q_PROPERTY(bool keepAspectRatio READ keepAspectRatio WRITE setKeepAspectRatio)
     Q_PROPERTY(bool center READ center WRITE setCenter)
     Q_PROPERTY(QString resourcePath READ resourcePath WRITE setResourcePath)
+    Q_PROPERTY(QString variable READ variable WRITE setVariable)
     Q_PROPERTY(bool watermark READ isWatermark WRITE setWatermark)
+    Q_PROPERTY(bool useExternalPainter READ useExternalPainter WRITE setUseExternalPainter)
+
 public:
     enum Format {
         Binary  = 0,
@@ -58,8 +61,8 @@ public:
     ImageItem(QObject *owner, QGraphicsItem *parent);
     virtual void paint(QPainter *ppainter, const QStyleOptionGraphicsItem *option, QWidget *widget);
     void setImage(QImage value);
-    QImage image(){return m_picture;}
-    void setResourcePath(const QString &value){m_resourcePath=value;}
+    QImage image();
+    void setResourcePath(const QString &value);
     QString resourcePath() const;
     QString datasource() const;
     void setDatasource(const QString &datasource);
@@ -76,16 +79,30 @@ public:
     void setCenter(bool center);
     Format format() const;
     void setFormat(Format format);
-
     qreal minHeight() const;
 
+    QString variable(){ return m_variable;}
+    void setVariable(const QString& variable);
+
+    void setExternalPainter(IExternalPainter* externalPainter){ m_externalPainter = externalPainter;}
+
+    bool useExternalPainter() const;
+    void setUseExternalPainter(bool value);
+
+    QWidget* defaultEditor();
 protected:
     BaseDesignIntf* createSameTypeItem(QObject *owner, QGraphicsItem *parent);
     void updateItemSize(DataSourceManager *dataManager, RenderPass pass, int maxHeight);
     bool isNeedUpdateSize(RenderPass) const;
     bool drawDesignBorders() const {return m_picture.isNull();}
+    void loadPictureFromVariant(QVariant& data);
+    void preparePopUpMenu(QMenu &menu);
+    void processPopUpAction(QAction *action);
+    QImage drawImage();
 private:
     QImage  m_picture;
+    bool m_useExternalPainter;
+    IExternalPainter* m_externalPainter;
     QString m_resourcePath;
     QString m_datasource;
     QString m_field;
@@ -94,6 +111,7 @@ private:
     bool    m_keepAspectRatio;
     bool    m_center;
     Format  m_format;
+    QString m_variable;    
 };
 
 }

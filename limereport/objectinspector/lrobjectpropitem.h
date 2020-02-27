@@ -56,7 +56,7 @@ namespace LimeReport{
         virtual QVariant propertyValue() const;
         virtual void     setPropertyValue(QVariant value);
         virtual QString  propertyName() const {return m_name;}
-        virtual QString  displayName() const {return m_displayName;}
+        virtual QString  displayName() const;
         virtual QString  displayValue() const;
         virtual QIcon    iconValue() const{return QIcon();}
         virtual bool     isHaveChildren() const {return m_childItems.count()>0;}
@@ -90,6 +90,8 @@ namespace LimeReport{
         void setModelIndex(const QModelIndex& index){m_index=index;}
         QModelIndex modelIndex(){return m_index;}
         bool isClass(){return m_isClass;}
+        bool isTranslateProperty() const;
+        void setTranslateProperty(bool translatePropperty);
 #ifdef INSPECT_BASEDESIGN
     private slots:
         void slotPropertyChanged(const QString& name, QVariant, QVariant newValue);
@@ -97,7 +99,7 @@ namespace LimeReport{
 #endif
     private:
         bool m_valid;
-        void invalidate(){m_object=0; m_objects=0; m_valid = false; m_name = ""; m_value=QVariant(), m_isClass=false;}
+        void invalidate(){m_object=0; m_objects=0; m_valid = false; m_name = ""; m_value=QVariant(); m_isClass=false;}
 
     protected:
         void beginChangeValue(){ m_changingValue = true; }
@@ -120,6 +122,7 @@ namespace LimeReport{
         QModelIndex m_index;
         bool m_isClass;
         bool m_changingValue;
+        bool m_translatePropperty;
     };
 
     typedef QPair<QString,QString> APropIdent;
@@ -137,4 +140,7 @@ namespace LimeReport{
     };
 
 }
+
+Q_DECLARE_METATYPE(LimeReport::ObjectPropItem*)
+
 #endif // LROBJECTPROPITEM_H

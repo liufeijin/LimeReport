@@ -34,15 +34,17 @@
 #include "lritemscontainerdesignitf.h"
 #include <QList>
 #include <QColor>
+#include <QPrinter>
 
 namespace LimeReport{
 
 class ReportRender;
-class PageItemDesignIntf : public LimeReport::ItemsContainerDesignInft
+class PageItemDesignIntf : public ItemsContainerDesignInft
 {
     Q_OBJECT
     Q_ENUMS(Orientation)
     Q_ENUMS(PageSize)
+    Q_ENUMS(PrintBehavior)
     Q_PROPERTY(int topMargin READ topMargin WRITE setTopMargin)
     Q_PROPERTY(int bottomMargin READ bottomMargin WRITE setBottomMargin)
     Q_PROPERTY(int rightMargin READ rightMargin WRITE setRightMargin)
@@ -53,14 +55,31 @@ class PageItemDesignIntf : public LimeReport::ItemsContainerDesignInft
     Q_PROPERTY(bool fullPage READ fullPage WRITE setFullPage)
     Q_PROPERTY(bool oldPrintMode READ oldPrintMode WRITE setOldPrintMode)
     Q_PROPERTY(bool resetPageNumber READ resetPageNumber WRITE setResetPageNumber)
+    Q_PROPERTY(bool isExtendedInDesignMode READ isExtendedInDesignMode WRITE setExtendedInDesignMode)
+    Q_PROPERTY(int  extendedHeight READ extendedHeight WRITE setExtendedHeight)
+    Q_PROPERTY(bool pageIsTOC READ isTOC WRITE setIsTOC)
+    Q_PROPERTY(bool setPageSizeToPrinter READ getSetPageSizeToPrinter WRITE setSetPageSizeToPrinter )
+    Q_PROPERTY(bool endlessHeight READ endlessHeight WRITE setEndlessHeight)
+    Q_PROPERTY(bool printable READ isPrintable WRITE setPrintable)
+    Q_PROPERTY(QString printerName READ printerName WRITE setPrinterName)
+    Q_PROPERTY(UnitType units READ unitType WRITE setUnitTypeProperty)
+    Q_PROPERTY(PrintBehavior printBehavior READ printBehavior WRITE setPrintBehavior)
     friend class ReportRender;
 public:
-    enum Orientation { Portrait, Landscape };
-    enum PageSize {A4, B5, Letter, Legal, Executive,
-                   A0, A1, A2, A3, A5, A6, A7, A8, A9, B0, B1,
-                   B10, B2, B3, B4, B6, B7, B8, B9, C5E, Comm10E,
-                   DLE, Folio, Ledger, Tabloid, Custom, NPageSize = Custom
-                  };
+    enum Orientation { Portrait = QPrinter::Portrait, Landscape = QPrinter::Landscape };
+    enum PrintBehavior {Scale, Split};
+    enum PageSize {
+        A4 = QPrinter::A4, B5 = QPrinter::B5, Letter = QPrinter::Letter,
+        Legal = QPrinter::Legal, Executive = QPrinter::Executive,
+        A0 = QPrinter::A0, A1 = QPrinter::A1, A2 = QPrinter::A2, A3 = QPrinter::A3,
+        A5 = QPrinter::A5, A6 = QPrinter::A6, A7 = QPrinter::A7, A8 = QPrinter::A8,
+        A9 = QPrinter::A9, B0 = QPrinter::B0, B1 = QPrinter::B1, B10 = QPrinter::B10,
+        B2 = QPrinter::B2, B3 = QPrinter::B3, B4 = QPrinter::B4, B6 = QPrinter::B6,
+        B7 = QPrinter::B7, B8 = QPrinter::B8, B9 = QPrinter::B9, C5E = QPrinter::C5E,
+        Comm10E = QPrinter::Comm10E, DLE = QPrinter::DLE, Folio = QPrinter::Folio,
+        Ledger = QPrinter::Ledger, Tabloid = QPrinter::Tabloid, Custom = QPrinter::Custom,
+        NPageSize = Custom
+    };
     typedef QList<BandDesignIntf*> BandsList;
     typedef QList<BandDesignIntf*>::const_iterator BandsIterator;
     typedef QSharedPointer<PageItemDesignIntf> Ptr;
@@ -74,6 +93,8 @@ public:
     virtual QColor selectionColor() const;
     virtual QColor pageBorderColor() const;
     virtual QColor gridColor() const;
+    virtual QRectF boundingRect() const;
+    void setItemMode(LimeReport::BaseDesignIntf::ItemMode mode);
     void clear();
     const BandsList& childBands() const {return m_bands;}
     BandDesignIntf * bandByType(BandDesignIntf::BandsType bandType) const;
@@ -113,16 +134,49 @@ public:
 
     bool oldPrintMode() const;
     void setOldPrintMode(bool oldPrintMode);
-    bool canContainChildren(){ return true;}
+    bool canContainChildren() const{ return true;}
     bool resetPageNumber() const;
     void setResetPageNumber(bool resetPageNumber);
     void updateSubItemsSize(RenderPass pass, DataSourceManager *dataManager);    
     void swapBands(BandDesignIntf *band, BandDesignIntf *bandToSwap);    
     void moveBandFromTo(int from, int to);
 
+    QList<BandDesignIntf *> createBandGroup(int beginIndex, int endIndex);
+    
+    bool isExtendedInDesignMode() const;
+    void setExtendedInDesignMode(bool isExtendedInDesignMode);
+    int  extendedHeight() const;
+    void setExtendedHeight(int extendedHeight);
+
+    bool isTOC() const;
+    void setIsTOC(bool isTOC);
+    bool getSetPageSizeToPrinter() const;
+    void setSetPageSizeToPrinter(bool setPageSizeToPrinter);
+
+    bool endlessHeight() const;
+    void setEndlessHeight(bool endlessHeight);
+
+    bool isPrintable() const;
+    void setPrintable(bool printable);
+
+    QString printerName() const;
+    void setPrinterName(const QString& printerName);
+
+    void placeTearOffBand();
+    BandDesignIntf *pageFooter() const;
+    void setPageFooter(BandDesignIntf *pageFooter);
+    
+    PrintBehavior printBehavior() const;
+    void setPrintBehavior(const PrintBehavior &printBehavior);
+
+signals:
+    void beforeFirstPageRendered();
+    void afterLastPageRendered();
 protected slots:
     void bandDeleted(QObject* band);
+    void bandPositionChanged(QObject* object, QPointF newPos, QPointF oldPos);
     void bandGeometryChanged(QObject* object, QRectF newGeometry, QRectF oldGeometry);
+    void setUnitTypeProperty(BaseDesignIntf::UnitType value);
 protected:
     void    collectionLoadFinished(const QString& collectionName);
     QRectF& pageRect(){return m_pageRect;}
@@ -132,8 +186,9 @@ protected:
     void    initPageSize(const QSizeF &size);
     QColor  selectionMarkerColor(){return Qt::transparent;}
     void    preparePopUpMenu(QMenu &menu);
+    void    processPopUpAction(QAction *action);
 private:
-    void paintGrid(QPainter *ppainter);
+    void paintGrid(QPainter *ppainter, QRectF rect);
     void initColumnsPos(QVector<qreal>&posByColumns, qreal pos, int columnCount);
 private:
     int m_topMargin;
@@ -148,6 +203,17 @@ private:
     bool m_fullPage;
     bool m_oldPrintMode;
     bool m_resetPageNumber;
+    bool m_isExtendedInDesignMode;
+    int  m_extendedHeight;
+    bool m_isTOC;
+    bool m_setPageSizeToPrinter;
+    bool m_endlessHeight;
+    bool m_printable;
+    QString m_printerName;
+    BandDesignIntf* m_pageFooter;
+    PrintBehavior m_printBehavior;
+
+
 };
 
 typedef QList<PageItemDesignIntf::Ptr> ReportPages;
