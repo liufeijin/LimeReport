@@ -181,7 +181,8 @@ BandDesignIntf *PageItemDesignIntf::bandByType(BandDesignIntf::BandsType bandTyp
     QList<BandDesignIntf*>::const_iterator it = childBands().constBegin();
     for(;it!=childBands().constEnd();++it){
         if ( (*it)->bandType()==bandType) return (*it);
-    }    return 0;
+    }
+    return 0;
 }
 
 bool PageItemDesignIntf::isBandExists(BandDesignIntf::BandsType bandType)
@@ -875,8 +876,8 @@ void PageItemDesignIntf::moveBandFromTo(int from, int to)
 
 void PageItemDesignIntf::bandPositionChanged(QObject* object, QPointF newPos, QPointF oldPos)
 {
-    if (itemMode() == DesignMode){
-        BandDesignIntf* band = dynamic_cast<BandDesignIntf*>(object);
+    BandDesignIntf* band = dynamic_cast<BandDesignIntf*>(object);
+    if (band && !band->isChangingPos() && (itemMode() == DesignMode)){
         int curIndex = band->bandIndex();
         BandDesignIntf* bandToSwap = 0;
         foreach(BandDesignIntf* curBand, bands()){
@@ -905,7 +906,8 @@ void PageItemDesignIntf::bandPositionChanged(QObject* object, QPointF newPos, QP
                 page()->saveCommand(BandMoveFromToCommand::create(page(), band->bandIndex(), bandToSwap->bandIndex()), true);
         }
     }
-    relocateBands();
+    if (band && !band->isChangingPos())
+        relocateBands();
 }
 
 void PageItemDesignIntf::bandGeometryChanged(QObject* object, QRectF newGeometry, QRectF oldGeometry)
